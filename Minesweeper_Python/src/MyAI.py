@@ -1,15 +1,15 @@
 # ==============================CS-199==================================
-# FILE:			MyAI.py
+# FILE:         MyAI.py
 #
-# AUTHOR: 		Justin Chung
+# AUTHOR:       Vaibhav Yengul
 #
-# DESCRIPTION:	This file contains the MyAI class. You will implement your
-#				agent in this file. You will write the 'getAction' function,
-#				the constructor, and any additional helper functions.
+# DESCRIPTION:  This file contains the MyAI class. You will implement your
+#               agent in this file. You will write the 'getAction' function,
+#               the constructor, and any additional helper functions.
 #
-# NOTES: 		- MyAI inherits from the abstract AI class in AI.py.
+# NOTES:        - MyAI inherits from the abstract AI class in AI.py.
 #
-#				- DO NOT MAKE CHANGES TO THIS FILE.
+#               - DO NOT MAKE CHANGES TO THIS FILE.
 # ==============================CS-199==================================
 
 from AI import AI
@@ -36,7 +36,7 @@ class MyAI(AI):
         self.Tiles = [[TileInfo(-10, False) for j in range(self.cols)] for i in range(self.rows)]
         self.queue = []
         self.voteq = []
-        self.debug = True
+        self.debug = False
         self.uncoverCount = 0
 
     def getAction(self, number: int) -> "Action Object":
@@ -85,12 +85,12 @@ class MyAI(AI):
                             continue
                         queue2.append([x1, y1, AI.Action.UNCOVER])
         """
-		if number == 1:
-			for x in range(newx-2, newx+3):
-				queue2.append([x, newy-2])
-				queue2.append([x, newy + 2])
-			queue2.extend([[newx-2, newy-1], [newx-2, newy], [newx-2, newy+1], [newx+2, newy-1],[newx+2, newy], [newx+2, newy+1]]);
-		"""
+        if number == 1:
+            for x in range(newx-2, newx+3):
+                queue2.append([x, newy-2])
+                queue2.append([x, newy + 2])
+            queue2.extend([[newx-2, newy-1], [newx-2, newy], [newx-2, newy+1], [newx+2, newy-1],[newx+2, newy], [newx+2, newy+1]]);
+        """
         queue3 = []
         for c in queue2:
             if self.rows > c[0] >= 0 and self.cols > c[1] >= 0 and not (self.Tiles[c[0]][c[1]]).uncover:
@@ -137,9 +137,12 @@ class MyAI(AI):
                 action = AI.Action.UNCOVER
                 if self.debug:
                     print(action, self.prev_x, self.prev_y, "\n")
-                return Action(AI.Action.UNCOVER, nnx, nny);
+                return Action(AI.Action.UNCOVER, nnx, nny)
 
-        if(action == -10 and self.uncoverCount > (2/3 * self.rows*self.cols)):
+        portion = 2/3
+        if self.rows == 30:
+            portion = 4/5
+        if(action == -10 and self.uncoverCount > (portion * self.rows*self.cols)):
             if not self.Tiles[self.rows-1][self.cols-1].uncover:
                 self.prev_x = self.rows-1
                 self.prev_y = self.cols - 1
@@ -173,10 +176,12 @@ class MyAI(AI):
         if self.debug:
             self.printVoteBoard()
         max = -100
+        min = 100
         xmax, ymax = [], []
+        xmin, ymin = [], []
         for a in range(self.rows):
             for b in range(self.cols):
-                if self.Tiles[a][b].number != -10 : continue
+                if self.Tiles[a][b].number != -10 or self.Tiles[a][b].uncover: continue
                 if self.Tiles[a][b].voteNumber > max:
                     max = self.Tiles[a][b].voteNumber
                     xmax = [a]
@@ -184,6 +189,15 @@ class MyAI(AI):
                 elif self.Tiles[a][b].voteNumber == max:
                     xmax.append(a)
                     ymax.append(b)
+                if self.Tiles[a][b].voteNumber ==0:
+                    continue
+                if self.Tiles[a][b].voteNumber < min :
+                    min = self.Tiles[a][b].voteNumber
+                    xmin = [a]
+                    ymin = [b]
+                elif self.Tiles[a][b].voteNumber == min:
+                    xmin.append(a)
+                    ymin.append(b)
         for i in range(len(xmax)):
             self.voteq.append([xmax[i], ymax[i], AI.Action.FLAG])
             break;
@@ -250,7 +264,7 @@ class MyAI(AI):
                 self.identifyPatterns5(x, self.cols - 2)
 
         if not self.queue:
-            for x in range(1, self.cols - 1):
+            for x in range(1, self.rows - 1):
                 for y in range(1, self.cols - 1):
                     if self.Tiles[x][y].number == -10 or self.Tiles[x][y].number == 0 or self.Tiles[x][
                         y].number == -1: continue
@@ -283,7 +297,7 @@ class MyAI(AI):
                         self.Tiles[g][y + 1].uncover and not self.Tiles[g][y - 1].uncover:
                     self.queue.append([g, y - 1, AI.Action.FLAG])
 
-            for x in range(1, self.cols - 1):
+            for x in range(1, self.rows - 1):
                 if self.Tiles[x][0].number == -10 or self.Tiles[0][y].number == 0 or self.Tiles[0][
                     y].number == -1: continue
                 # print([t[0].uncover for t in self.Tiles[x - 1:x + 2]])
@@ -297,7 +311,7 @@ class MyAI(AI):
                         self.Tiles[x - 1][1].uncover and self.Tiles[x][1].uncover and not self.Tiles[x + 1][1].uncover:
                     self.queue.append([x + 1, 1, AI.Action.FLAG])
 
-            for x in range(1, self.cols - 1):
+            for x in range(1, self.rows - 1):
                 g = self.cols - 1
                 # col-last
                 # print([t[g].uncover for t in self.Tiles[x - 1:x + 2]])
@@ -339,6 +353,8 @@ class MyAI(AI):
                             self.queue.append([move[0], move[1], AI.Action.UNCOVER])
 
     def identifyCornerPatters(self, corner, x, y):
+        if self.minesLeft> 2:
+            return
         pat = [[0 for _ in range(3)] for _ in range(3)]
         for i in [-1, 0, 1]:
             for j in [-1, 0, 1]:
@@ -378,6 +394,9 @@ class MyAI(AI):
             else:
                 self.queue.append([x, y, AI.Action.FLAG])
 
+    def isValidTile(self, a, b):
+        return 0<=a<self.rows and 0<=b<self.cols
+
 
     def identifyPatterns3(self, x, y):
         pat = [[0 for _ in range(3)] for _ in range(3)]
@@ -391,25 +410,101 @@ class MyAI(AI):
                 pat2[i + 1][j + 1] = self.Tiles[x + i][y + j].uncover
                 if not self.Tiles[x + i][y + j].uncover:
                     notuncvr.append([x + i, y + j])
-        if pat[1][1] == 1 and pat[0][1] >= 1 and pat[1][0] >= 1 and pat2[0][2] and pat2[1][2] and pat2[2][2] and \
-                pat2[2][1] and pat2[2][0]:
-            if not pat2[0][0]:
-                self.queue.append([x - 1, y - 1, AI.Action.FLAG])
 
-        elif pat[1][1] == 1 and pat[0][1] >= 1 and pat[1][2] >= 1 and pat2[0][0] and pat2[1][0] and pat2[2][2] and \
-                pat2[2][1] and pat2[2][0]:
-            if not pat2[0][2]:
-                self.queue.append([x - 1, y + 1, AI.Action.FLAG])
+        # 1-2-1 pattern
+        if pat[1] == [1, 2, 1] and pat2[2] == [True, True, True] and not pat2[0][0] and not pat2[0][2]:
+            self.queue.append([x - 1, y - 1, AI.Action.FLAG])
+            self.queue.append([x - 1, y + 1, AI.Action.FLAG])
 
-        elif pat[1][1] == 1 and pat[2][1] >= 1 and pat[1][0] >= 1 and pat2[0][0] and pat2[1][2] and pat2[0][2] and \
-                pat2[0][1] and pat2[2][2]:
-            if not pat2[2][0]:
-                self.queue.append([x + 1, y - 1, AI.Action.FLAG])
+        elif pat[1] == [1, 2, 1] and pat2[0] == [True, True, True] and not pat2[2][0] and not pat2[2][2]:
+            self.queue.append([x + 1, y - 1, AI.Action.FLAG])
+            self.queue.append([x + 1, y + 1, AI.Action.FLAG])
 
-        elif pat[1][1] == 1 and pat[2][1] >= 1 and pat[1][2] >= 1 and pat2[0][0] and pat2[1][0] and pat2[2][0] and \
-                pat2[0][1] and pat2[0][2]:
-            if not pat2[2][2]:
-                self.queue.append([x + 1, y + 1, AI.Action.FLAG])
+        elif [t[1] for t in pat] == [1, 2, 1] and [t[0] for t in pat2] == [True, True, True] and not pat2[0][
+            2] and not pat2[2][2]:
+            self.queue.append([x + 1, y + 1, AI.Action.FLAG])
+            self.queue.append([x - 1, y + 1, AI.Action.FLAG])
+
+        elif [t[1] for t in pat] == [1, 2, 1] and [t[2] for t in pat2] == [True, True, True] and not pat2[0][
+            0] and not pat2[2][0]:
+            self.queue.append([x + 1, y - 1, AI.Action.FLAG])
+            self.queue.append([x - 1, y - 1, AI.Action.FLAG])
+
+        #mirror done
+        elif pat[1][1]==2 and pat[1][2]==1 and pat2[2] == [True, True, True] and pat2[1][0] and \
+                pat2[0]==[False,False,False]:
+            self.queue.append([x-1, y-1, AI.Action.FLAG])
+
+        elif pat[1][1]==2 and pat[1][0]==1 and pat2[2] == [True, True, True] and pat2[1][2] and \
+                pat2[0]==[False,False,False]:
+            self.queue.append([x-1, y+1, AI.Action.FLAG])
+
+        #mirror done
+        elif pat[1][1]==2 and pat[2][1]==1 and [t[0] for t in pat2] == [True, True, True] and pat2[0][1] and \
+                [t[2] for t in pat2]==[False,False,False]:
+            self.queue.append([x-1, y+1, AI.Action.FLAG])
+
+        elif pat[1][1]==2 and pat[0][1]==1 and [t[0] for t in pat2] == [True, True, True] and pat2[2][1] and \
+                [t[2] for t in pat2]==[False,False,False]:
+            self.queue.append([x+1, y+1, AI.Action.FLAG])
+
+        #mirror done
+        elif pat[1][1]==2 and pat[0][1]==1 and [t[2] for t in pat2] == [True, True, True] and pat2[2][1] and \
+                [t[0] for t in pat2]==[False,False,False]:
+            self.queue.append([x+1, y-1, AI.Action.FLAG])
+
+        elif pat[1][1]==2 and pat[2][1]==1 and [t[2] for t in pat2] == [True, True, True] and pat2[0][1] and \
+                [t[0] for t in pat2]==[False,False,False]:
+            self.queue.append([x-1, y-1, AI.Action.FLAG])
+
+        elif pat[1][1] == 2 and pat[1][2] == 1 and pat2[0] == [True, True, True] and pat2[1][0] and \
+                pat2[2] == [False, False, False]:
+            self.queue.append([x + 1, y - 1, AI.Action.FLAG])
+
+        elif pat[1][1] == 2 and pat[1][0] == 1 and pat2[0] == [True, True, True] and pat2[1][2] and \
+                pat2[2] == [False, False, False]:
+            self.queue.append([x + 1, y + 1, AI.Action.FLAG])
+
+
+        elif pat[1][1] == 1 and pat[1][2] == 1 and [t[0] for t in pat2]==[True, True, True] and  \
+                pat2[2] == [True, True, True] and not pat2[0][1] and not pat2[0][2] and \
+                self.isValidTile(x-1, y+2) and not self.Tiles[x-1][y+2].uncover:
+            self.queue.append([x - 1, y + 2, AI.Action.UNCOVER])
+
+        elif pat[1][1] == 1 and pat[1][2] == 1 and [t[0] for t in pat2]==[True, True, True] and  \
+                pat2[0] == [True, True, True] and not pat2[2][1] and not pat2[2][2] and \
+                self.isValidTile(x+1, y+2) and not self.Tiles[x+1][y+2].uncover:
+            self.queue.append([x + 1, y + 2, AI.Action.UNCOVER])
+
+        elif pat[1][1] == 1 and pat[2][1] == 1 and [t[0] for t in pat2]==[True, True, True] and  \
+                pat2[0] == [True, True, True] and not pat2[1][2] and not pat2[2][2] and \
+                self.isValidTile(x+2, y+1) and not self.Tiles[x+2][y+1].uncover:
+            self.queue.append([x + 2, y + 1, AI.Action.UNCOVER])
+
+        elif pat[1][1] == 1 and pat[2][1] == 1 and [t[2] for t in pat2]==[True, True, True] and  \
+                pat2[0] == [True, True, True] and not pat2[1][0] and not pat2[2][0] and \
+                self.isValidTile(x+2, y-1) and not self.Tiles[x+2][y-1].uncover:
+            self.queue.append([x + 2, y - 1, AI.Action.UNCOVER])
+        ##
+        elif pat[1][1] == 1 and pat[1][0] == 1 and [t[2] for t in pat2]==[True, True, True] and  \
+                pat2[0] == [True, True, True] and not pat2[2][0] and not pat2[2][1] and \
+                self.isValidTile(x+1, y-2) and not self.Tiles[x+1][y-2].uncover:
+            self.queue.append([x + 1, y - 2, AI.Action.UNCOVER])
+
+        elif pat[1][1] == 1 and pat[1][0] == 1 and [t[2] for t in pat2] == [True, True, True] and \
+                pat2[2] == [True, True, True] and not pat2[0][0] and not pat2[0][1] and \
+                self.isValidTile(x - 1, y - 2) and not self.Tiles[x - 1][y - 2].uncover:
+            self.queue.append([x - 1, y - 2, AI.Action.UNCOVER])
+
+        elif pat[1][1] == 1 and pat[0][1] == 1 and [t[2] for t in pat2]==[True, True, True] and  \
+                pat2[2] == [True, True, True] and not pat2[0][0] and not pat2[1][0] and \
+                self.isValidTile(x-2, y-1) and not self.Tiles[x-2][y-1].uncover:
+            self.queue.append([x - 2, y - 1, AI.Action.UNCOVER])
+
+        elif pat[1][1] == 1 and pat[0][1] == 1 and [t[0] for t in pat2]==[True, True, True] and  \
+                pat2[2] == [True, True, True] and not pat2[0][2] and not pat2[1][2] and \
+                self.isValidTile(x-2, y+1) and not self.Tiles[x-2][y+1].uncover:
+            self.queue.append([x - 2, y + 1, AI.Action.UNCOVER])
 
         elif (pat[1][1] == 2 and len(notuncvr) == 2):
             for nuc in notuncvr:
@@ -439,7 +534,19 @@ class MyAI(AI):
                 if not self.Tiles[x + i][y + j].uncover:
                     notuncvr.append([x + i, y + j])
 
-        if (pat[1][1] == 1 and pat[1][0] == -10 and pat[2][1] == 1 and pat[2][0] == -10):
+        if (pat[1][1] == 1 and len(notuncvr) == 1):
+            for nuc in notuncvr:
+                self.queue.append([nuc[0], nuc[1], AI.Action.FLAG])
+
+        elif (pat[1][1] == 2 and len(notuncvr) == 2):
+            for nuc in notuncvr:
+                self.queue.append([nuc[0], nuc[1], AI.Action.FLAG])
+
+        elif (pat[1][1] == 3 and len(notuncvr) == 3):
+            for nuc in notuncvr:
+                self.queue.append([nuc[0], nuc[1], AI.Action.FLAG])
+
+        elif (pat[1][1] == 1 and pat[1][0] == -10 and pat[2][1] == 1 and pat[2][0] == -10):
             if not self.Tiles[x - 1][y - 1].uncover:
                 self.queue.append([x - 1, y - 1, AI.Action.UNCOVER])
 
@@ -541,9 +648,9 @@ class MyAI(AI):
 
         elif (pat[0][1] == 2 and pat[1][1] == 2 and pat[2][1] == 1 and pat[0][2] == -10 and pat[1][2] == -10 and pat[2][
             2] == -10
-                and pat[0][2] != -10 and pat[1][2] != -10 and pat[2][2] != -10):  # 2	-10
-            self.queue.append([x - 1, y + 1, AI.Action.FLAG])  # "2"	-10
-            self.queue.append([x, y + 1, AI.Action.FLAG])  # 1	-10
+                and pat[0][2] != -10 and pat[1][2] != -10 and pat[2][2] != -10):  # 2   -10
+            self.queue.append([x - 1, y + 1, AI.Action.FLAG])  # "2"    -10
+            self.queue.append([x, y + 1, AI.Action.FLAG])  # 1  -10
 
         elif pat[1] == [1,2,1] and pat2[0] == [False, False, False] and pat2[2] == [True, True, True]:
             self.queue.append([x-1, y-1, AI.Action.FLAG])
@@ -551,7 +658,7 @@ class MyAI(AI):
 
         elif (pat[0][0] == -10 and pat[1][0] == -10 and pat[2][0] == -10 and pat[0][1] == 1 and pat[1][1] == 2 and
                 pat[2][1] == 2 and pat[0][2] != -10 and pat[1][2] != -10 and pat[2][2] != -10):
-            self.queue.append([x + 1, y - 1, AI.Action.FLAG])  # -10	2
+            self.queue.append([x + 1, y - 1, AI.Action.FLAG])  # -10    2
 
         elif (pat[1][0] == 1 and pat[1][1] == 2 and pat[1][2] == 2 and pat[0][0] == 1 and pat[0][1] == -10 and pat[0][
             2] == -10):
@@ -571,7 +678,7 @@ class MyAI(AI):
                 self.queue.append([nuc[0], nuc[1], AI.Action.FLAG])
 
     # for i in [-1, 0, 1]:
-    #	print("\t".join([str(pat[i+1][0]), str(pat[1+i][1]), str(pat[i+1][2])]))
+    #   print("\t".join([str(pat[i+1][0]), str(pat[1+i][1]), str(pat[i+1][2])]))
 
     def identifyPatterns4(self, x, y):
         pat = [[0 for _ in range(3)] for _ in range(3)]
@@ -608,7 +715,19 @@ class MyAI(AI):
                 if not self.Tiles[x + i][y + j].uncover:
                     notuncvr.append([x + i, y + j])
 
-        if [t[2] for t in pat2] == [False, False, False] and [t[1] for t in pat] == [1, 2, 1] and [t[0] for t in
+        if (pat[1][1] == 2 and len(notuncvr) == 2):
+            for nuc in notuncvr:
+                self.queue.append([nuc[0], nuc[1], AI.Action.FLAG])
+
+        elif (pat[1][1] == 1 and len(notuncvr) == 1):
+            for nuc in notuncvr:
+                self.queue.append([nuc[0], nuc[1], AI.Action.FLAG])
+
+        elif (pat[1][1] == 3 and len(notuncvr) == 3):
+            for nuc in notuncvr:
+                self.queue.append([nuc[0], nuc[1], AI.Action.FLAG])
+
+        elif [t[2] for t in pat2] == [False, False, False] and [t[1] for t in pat] == [1, 2, 1] and [t[0] for t in
                                                                                                    pat2] == [True, True,
                                                                                                              True]:
             self.queue.append([x - 1, y + 1, AI.Action.FLAG])
